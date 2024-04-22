@@ -1,6 +1,4 @@
 import datetime
-from pprint import pprint
-
 import pymysql
 from settings import *
 
@@ -31,22 +29,27 @@ class Db:
             return conection
 
     def configure_table(self):
-        """Створюємо всі необхідні таблиці для роботи програми:
-
-        USERS;
-
-        MUSCLE_GROUP;
-
-        USER_EXERCISE;
-
-        TRAINING;
-        """
+        """Створює всі потрібні таблиці"""
         self.__create_user_table()
         self.__muscle_groups_table()
         self.__user_exercise_table()
         self.__training_table()
 
     def __create_user_table(self) -> None:
+        """
+            Створює таблицю користувачів (users), яка зберігає дані про користувачів.
+
+            Структура таблиці:
+            - id: INT - унікальний ідентифікатор користувача
+            - user_id: INT - унікальний ідентифікатор користувача (може бути використаний для зовнішніх систем)
+            - first_name: VARCHAR(255) - ім'я користувача
+            - last_name: VARCHAR(255) - прізвище користувача
+            - username: VARCHAR(255) - ім'я користувача у системі
+            - weight: INT - вага користувача
+            - age: INT - вік користувача
+            - tall: INT - зріст користувача
+            - gender: VARCHAR(255) - стать користувача
+            """
         with self.connection.cursor() as cursor:
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS users (
@@ -63,6 +66,13 @@ class Db:
         self.connection.commit()
 
     def __muscle_groups_table(self) -> None:
+        """
+            Створює таблицю груп м'язів (muscle_groups), яка зберігає назви груп м'язів.
+
+            Структура таблиці:
+            - id: INT - унікальний ідентифікатор групи м'язів
+            - groups_name: VARCHAR(255) - назва групи м'язів
+            """
         with self.connection.cursor() as cursor:
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS muscle_groups (
@@ -71,6 +81,15 @@ class Db:
         self.connection.commit()
 
     def __user_exercise_table(self) -> None:
+        """
+            Створює таблицю записів вправ користувачів (user_exercise), яка зберігає інформацію про вправи, які виконує користувач.
+
+            Структура таблиці:
+            - id: INT - унікальний ідентифікатор запису
+            - id_muscle_group: INT - ідентифікатор групи м'язів, до якої відноситься вправа
+            - user_id: INT - ідентифікатор користувача, який додав вправу
+            - exercise_name: VARCHAR(255) - назва вправи
+            """
         with self.connection.cursor() as cursor:
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS user_exercise (
@@ -84,6 +103,18 @@ class Db:
         self.connection.commit()
 
     def __training_table(self) -> None:
+        """
+            Створює таблицю тренувальних записів (training), яка зберігає інформацію про тренування користувачів.
+
+            Структура таблиці:
+            - id: INT - унікальний ідентифікатор запису
+            - id_user_exercise: INT - ідентифікатор запису вправи користувача
+            - user_id: INT - ідентифікатор користувача, який проводить тренування
+            - date: DATE - дата тренування
+            - time: TIME - час тренування
+            - weight: INT - вага, з якою була виконана вправа
+            - repeats: INT - кількість повторень
+            """
         with self.connection.cursor() as cursor:
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS training (
@@ -100,6 +131,18 @@ class Db:
         self.connection.commit()
 
     def add_user(self, user_id: int, first_name: str, last_name: str, username: str) -> None:
+        """
+            Додає нового користувача до таблиці користувачів (users).
+
+            Параметри:
+            - user_id: int - унікальний ідентифікатор користувача
+            - first_name: str - ім'я користувача
+            - last_name: str - прізвище користувача
+            - username: str - ім'я користувача у системі
+
+            Якщо користувач з вказаним user_id вже існує в базі даних, виводиться повідомлення про це.
+            Інакше, користувача додається до бази даних, і виводиться повідомлення про успішне додавання.
+            """
         with self.connection.cursor() as cursor:
             cursor.execute("SELECT * FROM users WHERE user_id = %s", (user_id,))
             existing_group = cursor.fetchone()
@@ -112,6 +155,15 @@ class Db:
         self.connection.commit()
 
     def add_muscle_groups(self, arg: str) -> None:
+        """
+            Додає нову групу м'язів до таблиці груп м'язів (muscle_groups).
+
+            Параметри:
+            - arg: str - назва нової групи м'язів
+
+            Якщо група м'язів з вказаною назвою вже існує в базі даних, виводиться повідомлення про це.
+            Інакше, група м'язів додається до бази даних, і виводиться повідомлення про успішне додавання.
+            """
         with self.connection.cursor() as cursor:
             cursor.execute("SELECT * FROM muscle_groups WHERE groups_name = %s", (arg,))
             existing_group = cursor.fetchone()
@@ -123,6 +175,17 @@ class Db:
         self.connection.commit()
 
     def add_user_exercise(self, id_muscle_group: int, user_id: int, exercise_name: str) -> None:
+        """
+        Додає новий запис про вправу користувача до таблиці вправ користувача (user_exercise).
+
+        Параметри:
+        - id_muscle_group: int - ідентифікатор групи м'язів
+        - user_id: int - ідентифікатор користувача
+        - exercise_name: str - назва вправи
+
+        Якщо вправа для вказаного користувача та групи м'язів вже існує в базі даних, виводиться повідомлення про це.
+        Інакше, новий запис додається до бази даних, і виводиться повідомлення про успішне додавання.
+        """
         with self.connection.cursor() as cursor:
             cursor.execute(
                 "SELECT * FROM user_exercise WHERE id_muscle_group = %s AND user_id = %s AND exercise_name = %s",
@@ -161,6 +224,14 @@ class Db:
         return exercises
 
     def add_training_record(self, id_user_exercise: int, user_id: int, repeats: int, weight: int = 0) -> None:
+        """
+        Додає запис про тренування для користувача.
+
+        :param id_user_exercise: Ідентифікатор вправи для користувача.
+        :param user_id: Ідентифікатор користувача.
+        :param repeats: Кількість повторів у вправі.
+        :param weight: Вага, яку використовував користувач (за замовчуванням 0).
+        """
         date = datetime.date.today().strftime("%Y-%m-%d")
         time = datetime.datetime.now().strftime("%H:%M:%S")
 
@@ -188,4 +259,4 @@ if __name__ == '__main__':
             database=DATABASE_NAME)
 
     for f in db.get_user_exercises(user_id=11111).values():
-        pprint(f)
+        print(f)
