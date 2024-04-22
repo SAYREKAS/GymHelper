@@ -154,6 +154,23 @@ class Db:
                 print(f"\nКористувача '{user_id}' успішно додано.")
         self.connection.commit()
 
+    def add_user_details(self, user_id: int, weight: int, age: int, tall: int, gender: str) -> None:
+        """
+        Додає дані про вагу, вік, зріст та стать користувача до таблиці користувачів (users).
+
+        :param user_id: int - унікальний ідентифікатор користувача
+        :param weight: int - вага користувача
+        :param age: int - вік користувача
+        :param tall: int - зріст користувача
+        :param gender: str - стать користувача
+        """
+        with self.connection.cursor() as cursor:
+            cursor.execute(
+                "UPDATE users SET weight = %s, age = %s, tall = %s, gender = %s WHERE user_id = %s",
+                (weight, age, tall, gender, user_id,))
+            self.connection.commit()
+            print(f"\nДані користувача з id {user_id} успішно оновлено.")
+
     def add_muscle_groups(self, arg: str) -> None:
         """
             Додає нову групу м'язів до таблиці груп м'язів (muscle_groups).
@@ -252,11 +269,6 @@ class Db:
 
 
 if __name__ == '__main__':
-    db = Db(host=DATABASE_HOST,
-            port=DATABASE_PORT,
-            user=DATABASE_USER,
-            password=DATABASE_PASS,
-            database=DATABASE_NAME)
+    db = Db(host=DATABASE_HOST, port=DATABASE_PORT, user=DATABASE_USER, password=DATABASE_PASS, database=DATABASE_NAME)
 
-    for f in db.get_user_exercises(user_id=11111).values():
-        print(f)
+    db.add_user_details(user_id=11111, weight=106, age=27, tall=190, gender='чоловік')
