@@ -11,12 +11,4 @@ DATABASE_USER = os.getenv('DATABASE_USER')
 DATABASE_PASS = os.getenv('DATABASE_PASS')
 DATABASE_NAME = os.getenv('DATABASE_NAME')
 
-muscle_group_list = ['шия',
-                     'плечі',
-                     'груди',
-                     'руки',
-                     'живіт',
-                     'спина',
-                     'сідниці',
-                     'ноги',
-                     ]
+muscle_group_list = ['шия', 'плечі', 'груди', 'руки', 'живіт', 'спина', 'сідниці', 'ноги', ]
