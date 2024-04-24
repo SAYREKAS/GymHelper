@@ -1,36 +1,39 @@
 import datetime
-import random
-from typing import List, Dict, Any
 
-import pymysql
 from settings import *
 from datetime import datetime, timedelta
 
+from pymysql.connections import Connection as PyMySQLConnection
+import pymysql
 
-class GymDb:
-    def __init__(self, host: str, user: str, password: str, port: int, database: str):
-        self.host = host
-        self.user = user
-        self.password = password
-        self.database = database
-        self.port = int(port)
-        self.connection = self.__connect()
 
-    def __connect(self):
-        """Підключаємося до бази даних"""
+class Connection:
+    def __init__(self, host: str, user: str, password: str, database: str, port: int = 3306):
+        self.__host = str(host)
+        self.__port = int(port)
+        self.__user = str(user)
+        self.__password = str(password)
+        self.__database = str(database)
+        self.session = self.__start()
+
+    def __start(self) -> PyMySQLConnection:
         try:
-            conection = pymysql.connect(
-                host=self.host,
-                port=self.port,
-                user=self.user,
-                password=self.password,
-                database=self.database
-            )
+            con = pymysql.connect(host=self.__host,
+                                  port=self.__port,
+                                  user=self.__user,
+                                  password=self.__password,
+                                  database=self.__database
+                                  )
         except Exception as ex:
             print(ex)
         else:
             print(f"\nПідключення до БД успішне")
-            return conection
+            return con
+
+
+class GymDb:
+    def __init__(self, conection: Connection):
+        self.__connection = conection.session
 
     def __create_user_table(self) -> None:
         """
@@ -47,7 +50,7 @@ class GymDb:
             - tall: INT - зріст користувача
             - gender: VARCHAR(255) - стать користувача
             """
-        with self.connection.cursor() as cursor:
+        with self.__connection.cursor() as cursor:
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS users (
             id INT PRIMARY KEY AUTO_INCREMENT, 
@@ -60,7 +63,7 @@ class GymDb:
             tall INT,
             gender VARCHAR(255)
             )""")
-        self.connection.commit()
+        self.__connection.commit()
 
     def __muscle_groups_table(self) -> None:
         """
@@ -70,12 +73,12 @@ class GymDb:
             - id: INT - унікальний ідентифікатор групи м'язів
             - groups_name: VARCHAR(255) - назва групи м'язів
             """
-        with self.connection.cursor() as cursor:
+        with self.__connection.cursor() as cursor:
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS muscle_groups (
             id INT PRIMARY KEY AUTO_INCREMENT,
             groups_name VARCHAR(255))""")
-        self.connection.commit()
+        self.__connection.commit()
 
     def __user_exercise_table(self) -> None:
         """
@@ -87,7 +90,7 @@ class GymDb:
             - user_id: INT - ідентифікатор користувача, який додав вправу
             - exercise_name: VARCHAR(255) - назва вправи
             """
-        with self.connection.cursor() as cursor:
+        with self.__connection.cursor() as cursor:
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS user_exercise (
             exercise_name VARCHAR(255) UNIQUE PRIMARY KEY,
@@ -96,7 +99,7 @@ class GymDb:
             FOREIGN KEY (id_muscle_group) REFERENCES muscle_groups(id),
             FOREIGN KEY (user_id) REFERENCES users(user_id)
             )""")
-        self.connection.commit()
+        self.__connection.commit()
 
     def __training_table(self) -> None:
         """
@@ -111,7 +114,7 @@ class GymDb:
             - weight: INT - вага, з якою була виконана вправа
             - repeats: INT - кількість повторень
             """
-        with self.connection.cursor() as cursor:
+        with self.__connection.cursor() as cursor:
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS training (
             id INT PRIMARY KEY AUTO_INCREMENT,
@@ -124,9 +127,9 @@ class GymDb:
             FOREIGN KEY (id_user_exercise) REFERENCES training(id),
             FOREIGN KEY (user_id) REFERENCES users(user_id)
             )""")
-        self.connection.commit()
+        self.__connection.commit()
 
-    def configure_table(self):
+    def configure_table(self) -> None:
         """Створює всі потрібні таблиці"""
         try:
             self.__create_user_table()
@@ -137,6 +140,32 @@ class GymDb:
             print(ex)
         else:
             print('\nТаблиці успішно сконфігуровані')
+
+    def add_muscle_groups(self, muscle_groups_list: list) -> None:
+        """
+            Додає нову групу м'язів до таблиці груп м'язів (muscle_groups).
+
+            Параметри:
+            - arg: str - назва нової групи м'язів
+
+            Якщо група м'язів з вказаною назвою вже існує в базі даних, виводиться повідомлення про це.
+            Інакше, група м'язів додається до бази даних, і виводиться повідомлення про успішне додавання.
+            """
+        with self.__connection.cursor() as cursor:
+            for muscle_group in muscle_groups_list:
+                cursor.execute("SELECT * FROM muscle_groups WHERE groups_name = %s", (muscle_group,))
+                existing_group = cursor.fetchone()
+                if existing_group:
+                    print(f"Група м'язів '{muscle_group}' вже існує.")
+                else:
+                    cursor.execute("INSERT INTO muscle_groups (groups_name) VALUES (%s)", (muscle_group,))
+                    print(f"Групу м'язів '{muscle_group}' успішно додано.")
+        self.__connection.commit()
+
+
+class GymUser:
+    def __init__(self, conection: Connection):
+        self.connection = conection.session
 
     def add_user(self, user_id: int, first_name: str, last_name: str, username: str) -> None:
         """
@@ -190,26 +219,6 @@ class GymDb:
             self.connection.commit()
             print(f"\nДані користувача з id {user_id} успішно оновлено.")
 
-    def add_muscle_groups(self, arg: str) -> None:
-        """
-            Додає нову групу м'язів до таблиці груп м'язів (muscle_groups).
-
-            Параметри:
-            - arg: str - назва нової групи м'язів
-
-            Якщо група м'язів з вказаною назвою вже існує в базі даних, виводиться повідомлення про це.
-            Інакше, група м'язів додається до бази даних, і виводиться повідомлення про успішне додавання.
-            """
-        with self.connection.cursor() as cursor:
-            cursor.execute("SELECT * FROM muscle_groups WHERE groups_name = %s", (arg,))
-            existing_group = cursor.fetchone()
-            if existing_group:
-                print(f"\nГрупа м'язів '{arg}' вже існує.")
-            else:
-                cursor.execute("INSERT INTO muscle_groups (groups_name) VALUES (%s)", (arg,))
-                print(f"\nГрупу м'язів '{arg}' успішно додано.")
-        self.connection.commit()
-
     def add_user_exercise(self, id_muscle_group: int, user_id: int, exercise_name: str) -> None:
         """
         Додає новий запис про вправу користувача до таблиці вправ користувача (user_exercise).
@@ -239,7 +248,7 @@ class GymDb:
                       f"та групи м'язів з id {id_muscle_group} успішно додано.")
         self.connection.commit()
 
-    def get_user_exercises(self, user_id: int) -> list[dict[str, Any]]:
+    def get_user_exercises(self, user_id: int) -> list[dict]:
         """
             Отримує всі вправи для заданого користувача.
 
@@ -286,7 +295,7 @@ class GymDb:
                   f"успішно додано.")
         self.connection.commit()
 
-    def get_training_records(self, user_id: int, days: int) -> list[dict[str, Any]]:
+    def get_training_records(self, user_id: int, days: int) -> list[dict]:
         """
         Отримує тренувальні записи для користувача за останній кількість днів.
 
@@ -317,36 +326,12 @@ class GymDb:
         return training_records
 
 
-def test():
-    db = GymDb(host=DATABASE_HOST, port=DATABASE_PORT, user=DATABASE_USER, password=DATABASE_PASS,
-               database=DATABASE_NAME)
+def main():
+    con = Connection(host=DATABASE_HOST, database=DATABASE_NAME, user=DATABASE_USER, password=DATABASE_PASS)
+    db = GymDb(con)
     db.configure_table()
-
-    if not db.user_exist(user_id=11111):
-        db.add_user(user_id=11111, first_name='bohdan', last_name='ohiichuk', username='bodick')
-
-    db.add_user_details(user_id=11111, weight=106, age=27, tall=190, gender='чоловік')
-
-    for f in muscle_group_list:
-        db.add_muscle_groups(f)
-
-    db.add_user_exercise(id_muscle_group=3, user_id=11111, exercise_name='штанга')
-    db.add_user_exercise(id_muscle_group=3, user_id=11111, exercise_name='штанга під кутом')
-    db.add_user_exercise(id_muscle_group=4, user_id=11111, exercise_name='гантеля на біцепс')
-
-    print('\n')
-    for f in db.get_user_exercises(user_id=11111):
-        print(f)
-
-    db.add_training_record(id_user_exercise=1, user_id=11111,
-                           repeats=random.randint(1, 20), weight=random.randint(10, 95))
-    db.add_training_record(id_user_exercise=1, user_id=11111,
-                           repeats=random.randint(1, 20), weight=random.randint(10, 95))
-
-    print('\n')
-    for f in db.get_training_records(user_id=11111, days=1):
-        print(f)
+    db.add_muscle_groups(muscle_group_list)
 
 
 if __name__ == '__main__':
-    test()
+    main()
