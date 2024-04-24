@@ -1,4 +1,7 @@
 import datetime
+import random
+from typing import List, Dict, Any
+
 import pymysql
 from settings import *
 from datetime import datetime, timedelta
@@ -87,10 +90,9 @@ class GymDb:
         with self.connection.cursor() as cursor:
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS user_exercise (
-            id INT PRIMARY KEY AUTO_INCREMENT,
+            exercise_name VARCHAR(255) UNIQUE PRIMARY KEY,
             id_muscle_group INT,
             user_id INT,
-            exercise_name VARCHAR(255) UNIQUE,
             FOREIGN KEY (id_muscle_group) REFERENCES muscle_groups(id),
             FOREIGN KEY (user_id) REFERENCES users(user_id)
             )""")
@@ -237,7 +239,7 @@ class GymDb:
                       f"та групи м'язів з id {id_muscle_group} успішно додано.")
         self.connection.commit()
 
-    def get_user_exercises(self, user_id: int) -> dict:
+    def get_user_exercises(self, user_id: int) -> list[dict[str, Any]]:
         """
             Отримує всі вправи для заданого користувача.
 
@@ -248,13 +250,13 @@ class GymDb:
                 dict: Словник, де ключі - це ID вправ, а значення - це словники, що містять 'muscle_group_id'
                       та 'exercise_name'.
             """
-        exercises = {}
+        exercises = []
         with self.connection.cursor() as cursor:
-            cursor.execute("SELECT id, id_muscle_group, exercise_name FROM user_exercise WHERE user_id = %s",
+            cursor.execute("SELECT exercise_name, id_muscle_group  FROM user_exercise WHERE user_id = %s",
                            (user_id,))
             result = cursor.fetchall()
             for row in result:
-                exercises[row[0]] = {'muscle_group_id': row[1], 'exercise_name': row[2]}
+                exercises.append({'exercise_name': row[0], 'muscle_group_id': row[1]})
         return exercises
 
     def add_training_record(self, id_user_exercise: int, user_id: int, repeats: int, weight: int = 0) -> None:
@@ -284,7 +286,7 @@ class GymDb:
                   f"успішно додано.")
         self.connection.commit()
 
-    def get_training_records(self, user_id: int, days: int) -> list:
+    def get_training_records(self, user_id: int, days: int) -> list[dict[str, Any]]:
         """
         Отримує тренувальні записи для користувача за останній кількість днів.
 
@@ -318,29 +320,32 @@ class GymDb:
 def test():
     db = GymDb(host=DATABASE_HOST, port=DATABASE_PORT, user=DATABASE_USER, password=DATABASE_PASS,
                database=DATABASE_NAME)
-    # db.configure_table()
+    db.configure_table()
 
-    # if not db.user_exist(user_id=22222):
-    #     db.add_user(user_id=22222, first_name='bohdan', last_name='ohiichuk', username='bodick')
+    if not db.user_exist(user_id=11111):
+        db.add_user(user_id=11111, first_name='bohdan', last_name='ohiichuk', username='bodick')
 
-    # db.add_user_details(user_id=11111, weight=106, age=27, tall=190, gender='чоловік')
+    db.add_user_details(user_id=11111, weight=106, age=27, tall=190, gender='чоловік')
 
-    # for f in muscle_group_list:
-    #     db.add_muscle_groups(f)
+    for f in muscle_group_list:
+        db.add_muscle_groups(f)
 
-    # db.add_user_exercise(id_muscle_group=3, user_id=11111, exercise_name='штанга')
-    # db.add_user_exercise(id_muscle_group=3, user_id=11111, exercise_name='штанга під кутом')
+    db.add_user_exercise(id_muscle_group=3, user_id=11111, exercise_name='штанга')
+    db.add_user_exercise(id_muscle_group=3, user_id=11111, exercise_name='штанга під кутом')
+    db.add_user_exercise(id_muscle_group=4, user_id=11111, exercise_name='гантеля на біцепс')
 
-    for f in db.get_user_exercises(user_id=11111).values():
-        print(f)
     print('\n')
+    for f in db.get_user_exercises(user_id=11111):
+        print(f)
 
-    # db.add_training_record(id_user_exercise=1, user_id=11111, repeats=10, weight=60)
-    # db.add_training_record(id_user_exercise=1, user_id=11111, repeats=10, weight=70)
+    db.add_training_record(id_user_exercise=1, user_id=11111,
+                           repeats=random.randint(1, 20), weight=random.randint(10, 95))
+    db.add_training_record(id_user_exercise=1, user_id=11111,
+                           repeats=random.randint(1, 20), weight=random.randint(10, 95))
 
+    print('\n')
     for f in db.get_training_records(user_id=11111, days=1):
         print(f)
-    print('\n')
 
 
 if __name__ == '__main__':
