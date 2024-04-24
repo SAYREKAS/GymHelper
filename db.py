@@ -36,20 +36,6 @@ class GymDb:
         self.__connection = conection.session
 
     def __create_user_table(self) -> None:
-        """
-            Створює таблицю користувачів (users), яка зберігає дані про користувачів.
-
-            Структура таблиці:
-            - id: INT - унікальний ідентифікатор користувача
-            - user_id: INT - унікальний ідентифікатор користувача (може бути використаний для зовнішніх систем)
-            - first_name: VARCHAR(255) - ім'я користувача
-            - last_name: VARCHAR(255) - прізвище користувача
-            - username: VARCHAR(255) - ім'я користувача у системі
-            - weight: INT - вага користувача
-            - age: INT - вік користувача
-            - tall: INT - зріст користувача
-            - gender: VARCHAR(255) - стать користувача
-            """
         with self.__connection.cursor() as cursor:
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS users (
@@ -66,37 +52,22 @@ class GymDb:
         self.__connection.commit()
 
     def __muscle_groups_table(self) -> None:
-        """
-            Створює таблицю груп м'язів (muscle_groups), яка зберігає назви груп м'язів.
 
-            Структура таблиці:
-            - id: INT - унікальний ідентифікатор групи м'язів
-            - groups_name: VARCHAR(255) - назва групи м'язів
-            """
         with self.__connection.cursor() as cursor:
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS muscle_groups (
-            id INT PRIMARY KEY AUTO_INCREMENT,
-            groups_name VARCHAR(255))""")
+            group_name VARCHAR(255) PRIMARY KEY)""")
         self.__connection.commit()
 
     def __user_exercise_table(self) -> None:
-        """
-            Створює таблицю записів вправ користувачів (user_exercise), яка зберігає інформацію про вправи, які виконує користувач.
-
-            Структура таблиці:
-            - id: INT - унікальний ідентифікатор запису
-            - id_muscle_group: INT - ідентифікатор групи м'язів, до якої відноситься вправа
-            - user_id: INT - ідентифікатор користувача, який додав вправу
-            - exercise_name: VARCHAR(255) - назва вправи
-            """
         with self.__connection.cursor() as cursor:
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS user_exercise (
-            exercise_name VARCHAR(255) UNIQUE PRIMARY KEY,
-            id_muscle_group INT,
+            id INT PRIMARY KEY AUTO_INCREMENT,
+            muscle_group_name VARCHAR(255),
             user_id INT,
-            FOREIGN KEY (id_muscle_group) REFERENCES muscle_groups(id),
+            exercise_name VARCHAR(255),
+            FOREIGN KEY (muscle_group_name) REFERENCES muscle_groups(group_name),
             FOREIGN KEY (user_id) REFERENCES users(user_id)
             )""")
         self.__connection.commit()
@@ -133,15 +104,20 @@ class GymDb:
         """Створює всі потрібні таблиці"""
         try:
             self.__create_user_table()
+            print('\n__create_user_table OK')
             self.__muscle_groups_table()
+            print('__muscle_groups_table OK')
             self.__user_exercise_table()
+            print('__user_exercise_table OK')
             self.__training_table()
+            print('__training_table OK')
+
         except Exception as ex:
             print(ex)
         else:
             print('\nТаблиці успішно сконфігуровані')
 
-    def add_muscle_groups(self, muscle_groups_list: list) -> None:
+    def add_muscle_groups(self, muscle_groups_list: list[str]) -> None:
         """
             Додає нову групу м'язів до таблиці груп м'язів (muscle_groups).
 
@@ -153,12 +129,12 @@ class GymDb:
             """
         with self.__connection.cursor() as cursor:
             for muscle_group in muscle_groups_list:
-                cursor.execute("SELECT * FROM muscle_groups WHERE groups_name = %s", (muscle_group,))
+                cursor.execute("SELECT * FROM muscle_groups WHERE group_name = %s", (muscle_group,))
                 existing_group = cursor.fetchone()
                 if existing_group:
                     print(f"Група м'язів '{muscle_group}' вже існує.")
                 else:
-                    cursor.execute("INSERT INTO muscle_groups (groups_name) VALUES (%s)", (muscle_group,))
+                    cursor.execute("INSERT INTO muscle_groups (group_name) VALUES (%s)", (muscle_group,))
                     print(f"Групу м'язів '{muscle_group}' успішно додано.")
         self.__connection.commit()
 
@@ -170,7 +146,7 @@ class GymDb:
         list[str]: Список назв груп м'язів.
         """
         with self.__connection.cursor() as cursor:
-            cursor.execute("SELECT DISTINCT groups_name FROM muscle_groups")
+            cursor.execute("SELECT DISTINCT group_name FROM muscle_groups")
             result = cursor.fetchall()
             muscle_groups = [row[0] for row in result]
         return muscle_groups
@@ -232,53 +208,37 @@ class GymUser:
             self.connection.commit()
             print(f"\nДані користувача з id {user_id} успішно оновлено.")
 
-    def add_user_exercise(self, id_muscle_group: int, user_id: int, exercise_name: str) -> None:
-        """
-        Додає новий запис про вправу користувача до таблиці вправ користувача (user_exercise).
-
-        Параметри:
-        - id_muscle_group: int - ідентифікатор групи м'язів
-        - user_id: int - ідентифікатор користувача
-        - exercise_name: str - назва вправи
-
-        Якщо вправа для вказаного користувача та групи м'язів вже існує в базі даних, виводиться повідомлення про це.
-        Інакше, новий запис додається до бази даних, і виводиться повідомлення про успішне додавання.
-        """
+    def add_user_exercise(self, muscle_group_name: str, user_id: int, exercise_name: str) -> None:
         with self.connection.cursor() as cursor:
             cursor.execute(
-                "SELECT * FROM user_exercise WHERE id_muscle_group = %s AND user_id = %s AND exercise_name = %s",
-                (id_muscle_group, user_id, exercise_name))
+                "SELECT * FROM user_exercise WHERE exercise_name = %s AND user_id = %s",
+                (exercise_name, user_id,))
             existing_exercise = cursor.fetchone()
             if existing_exercise:
                 print(f"\nВправа '{exercise_name}' "
                       f"для користувача з id {user_id} "
-                      f"та групи м'язів з id {id_muscle_group} вже існує.")
+                      f"та групи м'язів з імʼям {muscle_group_name} вже існує.")
             else:
                 cursor.execute(
-                    "INSERT INTO user_exercise (id_muscle_group, user_id, exercise_name) VALUES (%s, %s, %s)",
-                    (id_muscle_group, user_id, exercise_name,))
+                    "INSERT INTO user_exercise (muscle_group_name, user_id, exercise_name) VALUES (%s, %s, %s)",
+                    (muscle_group_name, user_id, exercise_name,))
                 print(f"\nЗапис '{exercise_name}' для користувача з id {user_id} "
-                      f"та групи м'язів з id {id_muscle_group} успішно додано.")
+                      f"та групи м'язів з імʼям {muscle_group_name} успішно додано.")
         self.connection.commit()
 
-    def get_user_exercises(self, user_id: int) -> list[dict]:
-        """
-            Отримує всі вправи для заданого користувача.
-
-            Args:
-                user_id (int): ID користувача.
-
-            Returns:
-                dict: Словник, де ключі - це ID вправ, а значення - це словники, що містять 'muscle_group_id'
-                      та 'exercise_name'.
-            """
+    def get_user_exercises(self, user_id: int, muscle_group_name: str = None) -> list[str]:
         exercises = []
         with self.connection.cursor() as cursor:
-            cursor.execute("SELECT exercise_name, id_muscle_group  FROM user_exercise WHERE user_id = %s",
+            cursor.execute("SELECT exercise_name, muscle_group_name  FROM user_exercise WHERE user_id = %s",
                            (user_id,))
             result = cursor.fetchall()
             for row in result:
-                exercises.append({'exercise_name': row[0], 'muscle_group_id': row[1]})
+                if muscle_group_name:
+                    if row[1] == muscle_group_name:
+                        exercises.append(row[0])
+                else:
+                    exercises.append(row[0])
+
         return exercises
 
     def add_training_record(self, id_user_exercise: int, user_id: int, repeats: int, weight: int = 0) -> None:
