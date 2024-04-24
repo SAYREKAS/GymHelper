@@ -1,9 +1,10 @@
 import datetime
 import pymysql
 from settings import *
+from datetime import datetime, timedelta
 
 
-class Db:
+class GymDb:
     def __init__(self, host: str, user: str, password: str, port: int, database: str):
         self.host = host
         self.user = user
@@ -27,13 +28,6 @@ class Db:
         else:
             print(f"\nПідключення до БД успішне")
             return conection
-
-    def configure_table(self):
-        """Створює всі потрібні таблиці"""
-        self.__create_user_table()
-        self.__muscle_groups_table()
-        self.__user_exercise_table()
-        self.__training_table()
 
     def __create_user_table(self) -> None:
         """
@@ -130,6 +124,18 @@ class Db:
             )""")
         self.connection.commit()
 
+    def configure_table(self):
+        """Створює всі потрібні таблиці"""
+        try:
+            self.__create_user_table()
+            self.__muscle_groups_table()
+            self.__user_exercise_table()
+            self.__training_table()
+        except Exception as ex:
+            print(ex)
+        else:
+            print('\nТаблиці успішно сконфігуровані')
+
     def add_user(self, user_id: int, first_name: str, last_name: str, username: str) -> None:
         """
             Додає нового користувача до таблиці користувачів (users).
@@ -140,19 +146,30 @@ class Db:
             - last_name: str - прізвище користувача
             - username: str - ім'я користувача у системі
 
-            Якщо користувач з вказаним user_id вже існує в базі даних, виводиться повідомлення про це.
-            Інакше, користувача додається до бази даних, і виводиться повідомлення про успішне додавання.
             """
+        with self.connection.cursor() as cursor:
+            cursor.execute("INSERT INTO users (user_id, first_name, last_name, username) VALUES (%s, %s, %s, %s)",
+                           (user_id, first_name, last_name, username,))
+            print(f"\nКористувача '{user_id}' успішно додано.")
+        self.connection.commit()
+
+    def user_exist(self, user_id: int) -> bool:
+        """
+        перевіряємо чи існує користувач з такимм user_id в БД
+
+        :param:
+            user_id: int
+
+        :return:
+            True - якщо снує,
+            False - якщо не існує.
+        """
         with self.connection.cursor() as cursor:
             cursor.execute("SELECT * FROM users WHERE user_id = %s", (user_id,))
             existing_group = cursor.fetchone()
             if existing_group:
-                print(f"\nКористувач '{user_id}' вже існує.")
-            else:
-                cursor.execute("INSERT INTO users (user_id, first_name, last_name, username) VALUES (%s, %s, %s, %s)",
-                               (user_id, first_name, last_name, username,))
-                print(f"\nКористувача '{user_id}' успішно додано.")
-        self.connection.commit()
+                return True
+        return False
 
     def add_user_details(self, user_id: int, weight: int, age: int, tall: int, gender: str) -> None:
         """
@@ -249,8 +266,8 @@ class Db:
         :param repeats: Кількість повторів у вправі.
         :param weight: Вага, яку використовував користувач (за замовчуванням 0).
         """
-        date = datetime.date.today().strftime("%Y-%m-%d")
-        time = datetime.datetime.now().strftime("%H:%M:%S")
+        date = datetime.now().date()
+        time = datetime.now().time()
 
         with self.connection.cursor() as cursor:
             cursor.execute(
@@ -267,8 +284,64 @@ class Db:
                   f"успішно додано.")
         self.connection.commit()
 
+    def get_training_records(self, user_id: int, days: int) -> list:
+        """
+        Отримує тренувальні записи для користувача за останній кількість днів.
+
+        :param user_id: int - ідентифікатор користувача
+        :param days: int - кількість днів назад
+        :return: list - список тренувальних записів
+        """
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=days)
+
+        with self.connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT * FROM training
+                WHERE user_id = %s AND date BETWEEN %s AND %s
+            """, (user_id, start_date, end_date))
+            result = cursor.fetchall()
+            training_records = []
+            for row in result:
+                training_records.append({
+                    'id': row[0],
+                    'id_user_exercise': row[1],
+                    'user_id': row[2],
+                    # 'date': row[3],
+                    # 'time': row[4],
+                    'weight': row[5],
+                    'repeats': row[6]
+                })
+        return training_records
+
+
+def test():
+    db = GymDb(host=DATABASE_HOST, port=DATABASE_PORT, user=DATABASE_USER, password=DATABASE_PASS,
+               database=DATABASE_NAME)
+    # db.configure_table()
+
+    # if not db.user_exist(user_id=22222):
+    #     db.add_user(user_id=22222, first_name='bohdan', last_name='ohiichuk', username='bodick')
+
+    # db.add_user_details(user_id=11111, weight=106, age=27, tall=190, gender='чоловік')
+
+    # for f in muscle_group_list:
+    #     db.add_muscle_groups(f)
+
+    # db.add_user_exercise(id_muscle_group=3, user_id=11111, exercise_name='штанга')
+    # db.add_user_exercise(id_muscle_group=3, user_id=11111, exercise_name='штанга під кутом')
+
+    for f in db.get_user_exercises(user_id=11111).values():
+        print(f)
+    print('\n')
+
+    # db.add_training_record(id_user_exercise=1, user_id=11111, repeats=10, weight=60)
+    # db.add_training_record(id_user_exercise=1, user_id=11111, repeats=10, weight=70)
+
+    for f in db.get_training_records(user_id=11111, days=1):
+        print(f)
+    print('\n')
+
 
 if __name__ == '__main__':
-    db = Db(host=DATABASE_HOST, port=DATABASE_PORT, user=DATABASE_USER, password=DATABASE_PASS, database=DATABASE_NAME)
-
-    db.add_user_details(user_id=11111, weight=106, age=27, tall=190, gender='чоловік')
+    test()
