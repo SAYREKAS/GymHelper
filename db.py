@@ -162,6 +162,19 @@ class GymDb:
                     print(f"Групу м'язів '{muscle_group}' успішно додано.")
         self.__connection.commit()
 
+    def get_muscle_groups(self) -> list[str]:
+        """
+        Повертає список доступних груп м'язів.
+
+        Returns:
+        list[str]: Список назв груп м'язів.
+        """
+        with self.__connection.cursor() as cursor:
+            cursor.execute("SELECT DISTINCT groups_name FROM muscle_groups")
+            result = cursor.fetchall()
+            muscle_groups = [row[0] for row in result]
+        return muscle_groups
+
 
 class GymUser:
     def __init__(self, conection: Connection):
@@ -329,8 +342,7 @@ class GymUser:
 def main():
     con = Connection(host=DATABASE_HOST, database=DATABASE_NAME, user=DATABASE_USER, password=DATABASE_PASS)
     db = GymDb(con)
-    db.configure_table()
-    db.add_muscle_groups(muscle_group_list)
+    user = GymUser(con)
 
 
 if __name__ == '__main__':
