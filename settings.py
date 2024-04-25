@@ -1,5 +1,8 @@
 import os
+from aiogram.types import BotCommand
 from dotenv import load_dotenv
+
+from db import Connection, GymDb, GymUser
 
 load_dotenv()
 
@@ -11,4 +14,12 @@ DATABASE_USER = os.getenv('DATABASE_USER')
 DATABASE_PASS = os.getenv('DATABASE_PASS')
 DATABASE_NAME = os.getenv('DATABASE_NAME')
 
-muscle_group_list = ['шия', 'плечі', 'груди', 'руки', 'живіт', 'спина', 'сідниці', 'ноги', ]
+BOT_COMMAND = [
+    BotCommand(command='start', description='перезапустити бота'),
+]
+
+muscle_group_list = ['Шия', 'Плечі', 'Груди', 'Руки', 'Живіт', 'Спина', 'Сідниці', 'Ноги']
+
+con = Connection(host=DATABASE_HOST, user=DATABASE_USER, password=DATABASE_PASS, database=DATABASE_NAME)
+db = GymDb(con)
+user = GymUser(con)
