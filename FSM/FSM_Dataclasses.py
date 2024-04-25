@@ -14,7 +14,7 @@ class NewExerciseState(StatesGroup):
 
 
 class StartTraining(StatesGroup):
-    id_user_exercise = State()
-    user_id = State()
+    muscle_group = State()
+    exercise_name = State()
     repeats = State()
     weight = State()
