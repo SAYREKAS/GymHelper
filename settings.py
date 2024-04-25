@@ -2,7 +2,7 @@ import os
 from aiogram.types import BotCommand
 from dotenv import load_dotenv
 
-from db import Connection, GymDb, GymUser
+from db import Connection, GymDb, GymUser, GymExercise, GymTraining
 
 load_dotenv()
 
@@ -23,3 +23,5 @@ muscle_group_list = ['Шия', 'Плечі', 'Груди', 'Руки', 'Живі
 con = Connection(host=DATABASE_HOST, user=DATABASE_USER, password=DATABASE_PASS, database=DATABASE_NAME)
 db = GymDb(con)
 user = GymUser(con)
+exercise = GymExercise(con)
+training = GymTraining(con)
