@@ -1,8 +1,8 @@
 import pymysql
 import datetime
+from settings import *
 from datetime import datetime, timedelta
 from pymysql.connections import Connection as PyMySQLConnection
-from settings import *
 
 
 class Connection:
@@ -66,34 +66,23 @@ class GymDb:
             user_id INT,
             exercise_name VARCHAR(255),
             FOREIGN KEY (muscle_group_name) REFERENCES muscle_groups(group_name),
-            FOREIGN KEY (user_id) REFERENCES users(user_id)
+            FOREIGN KEY (user_id) REFERENCES users(user_id),
+            INDEX (exercise_name)
             )""")
         self.__connection.commit()
 
     def __training_table(self) -> None:
-        """
-            Створює таблицю тренувальних записів (training), яка зберігає інформацію про тренування користувачів.
-
-            Структура таблиці:
-            - id: INT - унікальний ідентифікатор запису
-            - id_user_exercise: INT - ідентифікатор запису вправи користувача
-            - user_id: INT - ідентифікатор користувача, який проводить тренування
-            - date: DATE - дата тренування
-            - time: TIME - час тренування
-            - weight: INT - вага, з якою була виконана вправа
-            - repeats: INT - кількість повторень
-            """
         with self.__connection.cursor() as cursor:
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS training (
             id INT PRIMARY KEY AUTO_INCREMENT,
-            id_user_exercise INT,
+            user_exercise_name VARCHAR(255),
             user_id INT,
             date DATE,
             time TIME,
             weight INT,
             repeats INT,
-            FOREIGN KEY (id_user_exercise) REFERENCES training(id),
+            FOREIGN KEY (user_exercise_name) REFERENCES user_exercise(exercise_name),
             FOREIGN KEY (user_id) REFERENCES users(user_id)
             )""")
         self.__connection.commit()
@@ -217,26 +206,22 @@ class GymUser:
             self.connection.commit()
             print(f"\nДані користувача з id {user_id} успішно оновлено.")
 
+
+class GymExercise:
+    def __init__(self, conection: Connection):
+        self.connection = conection.session
+
     def add_user_exercise(self, user_id: int, muscle_group_name: str, exercise_name: str) -> None:
         with self.connection.cursor() as cursor:
             cursor.execute(
-                "SELECT * FROM user_exercise WHERE exercise_name = %s AND user_id = %s",
-                (exercise_name, user_id,))
-            existing_exercise = cursor.fetchone()
-            if existing_exercise:
-                print(f"\nВправа '{exercise_name}' "
-                      f"для користувача з id {user_id} "
-                      f"та групи м'язів з імʼям {muscle_group_name} вже існує.")
-            else:
-                cursor.execute(
-                    "INSERT INTO user_exercise (muscle_group_name, user_id, exercise_name) VALUES (%s, %s, %s)",
-                    (muscle_group_name, user_id, exercise_name,))
-                print(f"\nЗапис '{exercise_name}' для користувача з id {user_id} "
-                      f"та групи м'язів з імʼям {muscle_group_name} успішно додано.")
+                "INSERT INTO user_exercise (muscle_group_name, user_id, exercise_name) VALUES (%s, %s, %s)",
+                (muscle_group_name, user_id, exercise_name,))
+            print(f"\nЗапис '{exercise_name}' для користувача з id {user_id} "
+                  f"та групи м'язів з імʼям {muscle_group_name} успішно додано.")
         self.connection.commit()
 
-    def get_user_exercises(self, user_id: int, muscle_group_name: str = None) -> list[str]:
-        exercises = []
+    def get_user_exercises(self, user_id: int, muscle_group_name: str = None) -> dict[str, list[str]]:
+        exercises = {}
         with self.connection.cursor() as cursor:
             cursor.execute("SELECT exercise_name, muscle_group_name  FROM user_exercise WHERE user_id = %s",
                            (user_id,))
@@ -244,17 +229,40 @@ class GymUser:
             for row in result:
                 if muscle_group_name:
                     if row[1] == muscle_group_name:
-                        exercises.append(row[0])
+                        if row[1] not in exercises:
+                            exercises[row[1]] = []
+                        exercises[row[1]].append(row[0])
                 else:
-                    exercises.append(row[0])
+                    if row[1] not in exercises:
+                        exercises[row[1]] = []
+                    exercises[row[1]].append(row[0])
 
         return exercises
 
-    def add_training_record(self, id_user_exercise: int, user_id: int, repeats: int, weight: int = 0) -> None:
+    def exercise_exists(self, exercise_name: str) -> bool:
+        """
+        Перевіряє наявність вправи з вказаним ім'ям в таблиці user_exercise.
+
+        :param exercise_name: str - ім'я вправи для перевірки
+        :return: bool - True, якщо вправа існує, False - якщо ні
+        """
+        with self.connection.cursor() as cursor:
+            cursor.execute("SELECT * FROM user_exercise WHERE exercise_name = %s", (exercise_name,))
+            existing_exercise = cursor.fetchone()
+            if existing_exercise:
+                return True
+        return False
+
+
+class GymTraining:
+    def __init__(self, conection: Connection):
+        self.connection = conection.session
+
+    def add_training_record(self, user_id: int, exercise_name: int, repeats: int, weight: int = 0) -> None:
         """
         Додає запис про тренування для користувача.
 
-        :param id_user_exercise: Ідентифікатор вправи для користувача.
+        :param exercise_name: Ідентифікатор вправи для користувача.
         :param user_id: Ідентифікатор користувача.
         :param repeats: Кількість повторів у вправі.
         :param weight: Вага, яку використовував користувач (за замовчуванням 0).
@@ -265,11 +273,12 @@ class GymUser:
         with self.connection.cursor() as cursor:
             cursor.execute(
                 """INSERT INTO training 
-                (id_user_exercise, user_id, date, time, weight, repeats) 
+                (user_exercise_name, user_id, date, time, weight, repeats) 
                 VALUES (%s, %s, %s, %s, %s, %s)""",
-                (id_user_exercise, user_id, date, time, weight, repeats,))
+                (exercise_name, user_id, date, time, weight, repeats,)
+            )
             print(f"\nТренувальний запис для користувача з id {user_id}, "
-                  f"з id_user_exercise {id_user_exercise}, "
+                  f"з id_user_exercise {exercise_name}, "
                   f"датою {date}, "
                   f"часом {time}, "
                   f"вагою {weight} "
