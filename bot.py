@@ -1,48 +1,41 @@
+import sys
 import asyncio
 import logging
-import sys
 
-from aiogram import Bot, Dispatcher
-from aiogram.client.default import DefaultBotProperties
+from aiogram.types import Message
 from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart
-from aiogram.types import Message
+from aiogram import Bot, Dispatcher, types
+from aiogram.client.default import DefaultBotProperties
 
-from db import Db
 from settings import *
+from keyboards.reply import ReplyKb
+from FSM.FSM_message_handler import fsm_router
+
+bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 
 dp = Dispatcher()
-
-db = Db(host=DATABASE_HOST,
-        port=DATABASE_PORT,
-        user=DATABASE_USER,
-        password=DATABASE_PASS,
-        database=DATABASE_NAME)
+dp.include_router(fsm_router)
 
 
 @dp.message(CommandStart())
-async def command_start_handler(message: Message) -> None:
-    db.add_user(user_id=message.chat.id,
-                first_name=message.chat.first_name,
-                last_name=message.chat.last_name,
-                username=message.chat.username
-                )
-    await message.answer(f"Вітаємо в GymHelper")
-
-
-@dp.message()
-async def echo_handler(message: Message) -> None:
-    try:
-        await message.send_copy(chat_id=message.chat.id)
-    except TypeError:
-        await message.answer("Nice try!")
+async def start(message: Message) -> None:
+    if not user.user_exist(user_id=message.chat.id):
+        user.add_user(user_id=message.chat.id, first_name=message.chat.first_name, last_name=message.chat.last_name,
+                      username=message.chat.username)
+        await message.answer(f"Вітаємо в GymHelper", reply_markup=ReplyKb.start_menu)
+    else:
+        await message.answer(f"Бота перезапущено", reply_markup=ReplyKb.main_menu)
 
 
 async def main() -> None:
-    bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+    await bot.delete_webhook(drop_pending_updates=True)
+    await bot.delete_my_commands(scope=types.BotCommandScopeAllPrivateChats())
+    await bot.set_my_commands(BOT_COMMAND)
     await dp.start_polling(bot)
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
     asyncio.run(main())
+    print('\nBOT STOPED')
