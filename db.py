@@ -1,10 +1,8 @@
-import datetime
-
-from settings import *
-from datetime import datetime, timedelta
-
-from pymysql.connections import Connection as PyMySQLConnection
 import pymysql
+import datetime
+from datetime import datetime, timedelta
+from pymysql.connections import Connection as PyMySQLConnection
+from settings import *
 
 
 class Connection:
@@ -35,7 +33,7 @@ class GymDb:
     def __init__(self, conection: Connection):
         self.__connection = conection.session
 
-    def __create_user_table(self) -> None:
+    def __user_table(self) -> None:
         with self.__connection.cursor() as cursor:
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS users (
@@ -103,8 +101,8 @@ class GymDb:
     def configure_table(self) -> None:
         """Створює всі потрібні таблиці"""
         try:
-            self.__create_user_table()
-            print('\n__create_user_table OK')
+            self.__user_table()
+            print('\n__user_table OK')
             self.__muscle_groups_table()
             print('__muscle_groups_table OK')
             self.__user_exercise_table()
@@ -150,6 +148,17 @@ class GymDb:
             result = cursor.fetchall()
             muscle_groups = [row[0] for row in result]
         return muscle_groups
+
+    def drop_tables(self) -> None:
+        """
+        Видаляє усі створені таблиці з бази даних.
+        """
+        with self.__connection.cursor() as cursor:
+            cursor.execute("DROP TABLE IF EXISTS training")
+            cursor.execute("DROP TABLE IF EXISTS user_exercise")
+            cursor.execute("DROP TABLE IF EXISTS muscle_groups")
+            cursor.execute("DROP TABLE IF EXISTS users")
+        self.__connection.commit()
 
 
 class GymUser:
@@ -208,7 +217,7 @@ class GymUser:
             self.connection.commit()
             print(f"\nДані користувача з id {user_id} успішно оновлено.")
 
-    def add_user_exercise(self, muscle_group_name: str, user_id: int, exercise_name: str) -> None:
+    def add_user_exercise(self, user_id: int, muscle_group_name: str, exercise_name: str) -> None:
         with self.connection.cursor() as cursor:
             cursor.execute(
                 "SELECT * FROM user_exercise WHERE exercise_name = %s AND user_id = %s",
@@ -300,9 +309,9 @@ class GymUser:
 
 
 def main():
-    con = Connection(host=DATABASE_HOST, database=DATABASE_NAME, user=DATABASE_USER, password=DATABASE_PASS)
-    db = GymDb(con)
-    user = GymUser(con)
+    db.drop_tables()
+    db.configure_table()
+    db.add_muscle_groups(muscle_group_list)
 
 
 if __name__ == '__main__':
