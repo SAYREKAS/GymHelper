@@ -6,6 +6,18 @@ from pymysql.connections import Connection as PyMySQLConnection
 
 
 class Connection:
+    """
+        Клас для здійснення з'єднання з базою даних MySQL.
+
+        Attributes:
+            host (str): Хост бази даних.
+            port (int): Порт для з'єднання. За замовчуванням 3306.
+            user (str): Користувач бази даних.
+            password (str): Пароль для користувача бази даних.
+            database (str): Назва бази даних.
+            session (PyMySQLConnection): Об'єкт з'єднання з базою даних.
+        """
+
     def __init__(self, host: str, user: str, password: str, database: str, port: int = 3306):
         self.__host = str(host)
         self.__port = int(port)
@@ -15,25 +27,52 @@ class Connection:
         self.session = self.__start()
 
     def __start(self) -> PyMySQLConnection:
+        """
+        Метод для встановлення з'єднання з базою даних.
+
+        Returns:
+            PyMySQLConnection: Об'єкт з'єднання з базою даних.
+        """
         try:
-            con = pymysql.connect(host=self.__host,
-                                  port=self.__port,
-                                  user=self.__user,
-                                  password=self.__password,
-                                  database=self.__database
-                                  )
+            connection = pymysql.connect(host=self.__host,
+                                         port=self.__port,
+                                         user=self.__user,
+                                         password=self.__password,
+                                         database=self.__database
+                                         )
         except Exception as ex:
             print(ex)
         else:
             print(f"\nПідключення до БД успішне")
-            return con
+            return connection
 
 
 class GymDb:
+    """
+    Клас для роботи з базою даних, пов'язаною з тренуваннями у спортзалі.
+
+    Attributes:
+        connection (Connection): Об'єкт з'єднання з базою даних.
+    """
+
     def __init__(self, conection: Connection):
         self.__connection = conection.session
 
     def __user_table(self) -> None:
+        """
+            Створює таблицю користувачів (users), яка зберігає інформацію про користувачів.
+
+            Структура таблиці:
+            - id: INT - унікальний ідентифікатор запису (первинний ключ, автоматично збільшується)
+            - user_id: INT - унікальний ідентифікатор користувача
+            - first_name: VARCHAR(255) - ім'я користувача
+            - last_name: VARCHAR(255) - прізвище користувача
+            - username: VARCHAR(255) - ім'я користувача в системі
+            - weight: INT - вага користувача
+            - age: INT - вік користувача
+            - tall: INT - зріст користувача
+            - gender: VARCHAR(255) - стать користувача
+            """
         with self.__connection.cursor() as cursor:
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS users (
@@ -50,7 +89,12 @@ class GymDb:
         self.__connection.commit()
 
     def __muscle_groups_table(self) -> None:
+        """
+            Створює таблицю груп м'язів (muscle_groups), яка зберігає інформацію про назви груп м'язів.
 
+            Структура таблиці:
+            - group_name: VARCHAR(255) - назва групи м'язів (первинний ключ)
+            """
         with self.__connection.cursor() as cursor:
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS muscle_groups (
@@ -58,6 +102,15 @@ class GymDb:
         self.__connection.commit()
 
     def __user_exercise_table(self) -> None:
+        """
+            Створює таблицю вправ користувачів (user_exercise), яка зберігає інформацію про вправи користувачів.
+
+            Структура таблиці:
+            - id: INT - унікальний ідентифікатор запису
+            - muscle_group_name: VARCHAR(255) - назва групи м'язів, до якої належить вправа
+            - user_id: INT - ідентифікатор користувача, якому належить вправа
+            - exercise_name: VARCHAR(255) - назва вправи
+            """
         with self.__connection.cursor() as cursor:
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS user_exercise (
@@ -72,6 +125,18 @@ class GymDb:
         self.__connection.commit()
 
     def __training_table(self) -> None:
+        """
+            Створює таблицю тренувань (training), яка зберігає інформацію про тренування користувачів.
+
+            Структура таблиці:
+            - id: INT - унікальний ідентифікатор запису
+            - user_exercise_name: VARCHAR(255) - назва вправи користувача
+            - user_id: INT - ідентифікатор користувача, який проводить тренування
+            - date: DATE - дата тренування
+            - time: TIME - час тренування
+            - weight: INT - вага, з якою була виконана вправа
+            - repeats: INT - кількість повторень
+            """
         with self.__connection.cursor() as cursor:
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS training (
@@ -106,14 +171,11 @@ class GymDb:
 
     def add_muscle_groups(self, muscle_groups_list: list[str]) -> None:
         """
-            Додає нову групу м'язів до таблиці груп м'язів (muscle_groups).
+        Додає нові групи м'язів до таблиці груп м'язів (muscle_groups).
 
-            Параметри:
-            - arg: str - назва нової групи м'язів
-
-            Якщо група м'язів з вказаною назвою вже існує в базі даних, виводиться повідомлення про це.
-            Інакше, група м'язів додається до бази даних, і виводиться повідомлення про успішне додавання.
-            """
+        Args:
+            muscle_groups_list (list[str]): Список назв нових груп м'язів.
+        """
         with self.__connection.cursor() as cursor:
             for muscle_group in muscle_groups_list:
                 cursor.execute("SELECT * FROM muscle_groups WHERE group_name = %s", (muscle_group,))
@@ -130,7 +192,7 @@ class GymDb:
         Повертає список доступних груп м'язів.
 
         Returns:
-        list[str]: Список назв груп м'язів.
+            list[str]: Список назв груп м'язів.
         """
         with self.__connection.cursor() as cursor:
             cursor.execute("SELECT DISTINCT group_name FROM muscle_groups")
@@ -140,7 +202,7 @@ class GymDb:
 
     def drop_tables(self) -> None:
         """
-        Видаляє усі створені таблиці з бази даних.
+        Видаляє усі таблиці з бази даних.
         """
         with self.__connection.cursor() as cursor:
             cursor.execute("DROP TABLE IF EXISTS training")
@@ -151,20 +213,32 @@ class GymDb:
 
 
 class GymUser:
+    """
+        Клас для роботи з користувачами фітнес-залу в базі даних.
+
+        Поля:
+        - connection: Connection - об'єкт підключення до бази даних
+
+        Методи:
+        - __init__(connection: Connection): конструктор класу
+        - add_user(user_id: int, first_name: str, last_name: str, username: str) -> None: додає нового користувача
+        - user_exist(user_id: int) -> bool: перевіряє, чи існує користувач з заданим ID
+        - add_user_details(user_id: int, weight: int, age: int, tall: int, gender: str) -> None: додає додаткові дані користувача
+        """
+
     def __init__(self, conection: Connection):
         self.connection = conection.session
 
     def add_user(self, user_id: int, first_name: str, last_name: str, username: str) -> None:
-        """
-            Додає нового користувача до таблиці користувачів (users).
+        """"
+    Додає нового користувача до таблиці користувачів (users).
 
-            Параметри:
-            - user_id: int - унікальний ідентифікатор користувача
-            - first_name: str - ім'я користувача
-            - last_name: str - прізвище користувача
-            - username: str - ім'я користувача у системі
-
-            """
+    Параметри:
+    - user_id: int - унікальний ідентифікатор користувача
+    - first_name: str - ім'я користувача
+    - last_name: str - прізвище користувача
+    - username: str - ім'я користувача у системі
+    """
         with self.connection.cursor() as cursor:
             cursor.execute("INSERT INTO users (user_id, first_name, last_name, username) VALUES (%s, %s, %s, %s)",
                            (user_id, first_name, last_name, username,))
@@ -173,15 +247,15 @@ class GymUser:
 
     def user_exist(self, user_id: int) -> bool:
         """
-        перевіряємо чи існує користувач з такимм user_id в БД
+    Перевіряє, чи існує користувач з таким user_id в БД.
 
-        :param:
-            user_id: int
+    Параметри:
+    - user_id: int - унікальний ідентифікатор користувача
 
-        :return:
-            True - якщо снує,
-            False - якщо не існує.
-        """
+    Повертає:
+    - True, якщо користувач існує
+    - False, якщо користувача не існує
+    """
         with self.connection.cursor() as cursor:
             cursor.execute("SELECT * FROM users WHERE user_id = %s", (user_id,))
             existing_group = cursor.fetchone()
@@ -191,14 +265,15 @@ class GymUser:
 
     def add_user_details(self, user_id: int, weight: int, age: int, tall: int, gender: str) -> None:
         """
-        Додає дані про вагу, вік, зріст та стать користувача до таблиці користувачів (users).
+    Додає дані про вагу, вік, зріст та стать користувача до таблиці користувачів (users).
 
-        :param user_id: int - унікальний ідентифікатор користувача
-        :param weight: int - вага користувача
-        :param age: int - вік користувача
-        :param tall: int - зріст користувача
-        :param gender: str - стать користувача
-        """
+    Параметри:
+    - user_id: int - унікальний ідентифікатор користувача
+    - weight: int - вага користувача
+    - age: int - вік користувача
+    - tall: int - зріст користувача
+    - gender: str - стать користувача
+    """
         with self.connection.cursor() as cursor:
             cursor.execute(
                 "UPDATE users SET weight = %s, age = %s, tall = %s, gender = %s WHERE user_id = %s",
@@ -208,10 +283,31 @@ class GymUser:
 
 
 class GymExercise:
+    """
+        Клас для роботи з вправами фітнес-залу в базі даних.
+
+        Поля:
+        - connection: Connection - об'єкт підключення до бази даних
+
+        Методи:
+        - __init__(connection: Connection): конструктор класу
+        - add_user_exercise(user_id: int, muscle_group_name: str, exercise_name: str) -> None: додає нову вправу для користувача
+        - get_user_exercises(user_id: int, muscle_group_name: str = None) -> dict[str, list[str]]: повертає вправи користувача за групою м'язів
+        - exercise_exists(exercise_name: str) -> bool: перевіряє, чи існує вправа з вказаним ім'ям
+        """
+
     def __init__(self, conection: Connection):
         self.connection = conection.session
 
     def add_user_exercise(self, user_id: int, muscle_group_name: str, exercise_name: str) -> None:
+        """
+                Додає нову вправу для користувача до таблиці user_exercise.
+
+                Параметри:
+                - user_id: int - унікальний ідентифікатор користувача
+                - muscle_group_name: str - назва групи м'язів
+                - exercise_name: str - назва вправи
+                """
         with self.connection.cursor() as cursor:
             cursor.execute(
                 "INSERT INTO user_exercise (muscle_group_name, user_id, exercise_name) VALUES (%s, %s, %s)",
@@ -221,6 +317,16 @@ class GymExercise:
         self.connection.commit()
 
     def get_user_exercises(self, user_id: int, muscle_group_name: str = None) -> dict[str, list[str]]:
+        """
+                Повертає вправи користувача за групою м'язів.
+
+                Параметри:
+                - user_id: int - унікальний ідентифікатор користувача
+                - muscle_group_name: str - назва групи м'язів (опціонально)
+
+                Повертає:
+                - dict[str, list[str]]: словник, де ключ - назва групи м'язів, значення - список вправ
+                """
         exercises = {}
         with self.connection.cursor() as cursor:
             cursor.execute("SELECT exercise_name, muscle_group_name  FROM user_exercise WHERE user_id = %s",
@@ -241,10 +347,13 @@ class GymExercise:
 
     def exercise_exists(self, exercise_name: str) -> bool:
         """
-        Перевіряє наявність вправи з вказаним ім'ям в таблиці user_exercise.
+            Перевіряє наявність вправи з вказаним ім'ям в таблиці user_exercise.
 
-        :param exercise_name: str - ім'я вправи для перевірки
-        :return: bool - True, якщо вправа існує, False - якщо ні
+            Параметри:
+            - exercise_name: str - ім'я вправи для перевірки
+
+            Повертає:
+            - bool: True, якщо вправа існує, False - якщо ні
         """
         with self.connection.cursor() as cursor:
             cursor.execute("SELECT * FROM user_exercise WHERE exercise_name = %s", (exercise_name,))
@@ -255,17 +364,30 @@ class GymExercise:
 
 
 class GymTraining:
+    """
+        Клас для роботи з тренувальними записами в базі даних.
+
+        Поля:
+        - connection: Connection - об'єкт підключення до бази даних
+
+        Методи:
+        - __init__(connection: Connection): конструктор класу
+        - add_training_record(user_id: int, exercise_name: int, repeats: int, weight: int = 0) -> None: додає запис про тренування для користувача
+        - get_training_records(user_id: int, days: int) -> list[dict]: отримує тренувальні записи для користувача за останній кількість днів
+    """
+
     def __init__(self, conection: Connection):
         self.connection = conection.session
 
     def add_training_record(self, user_id: int, exercise_name: int, repeats: int, weight: int = 0) -> None:
         """
-        Додає запис про тренування для користувача.
+            Додає запис про тренування для користувача.
 
-        :param exercise_name: Ідентифікатор вправи для користувача.
-        :param user_id: Ідентифікатор користувача.
-        :param repeats: Кількість повторів у вправі.
-        :param weight: Вага, яку використовував користувач (за замовчуванням 0).
+            Параметри:
+            - user_id: int - ідентифікатор користувача
+            - exercise_name: int - ідентифікатор вправи для користувача
+            - repeats: int - кількість повторів у вправі
+            - weight: int - вага, яку використовував користувач (за замовчуванням 0)
         """
         date = datetime.now().date()
         time = datetime.now().time()
@@ -288,11 +410,14 @@ class GymTraining:
 
     def get_training_records(self, user_id: int, days: int) -> list[dict]:
         """
-        Отримує тренувальні записи для користувача за останній кількість днів.
+            Отримує тренувальні записи для користувача за останній кількість днів.
 
-        :param user_id: int - ідентифікатор користувача
-        :param days: int - кількість днів назад
-        :return: list - список тренувальних записів
+            Параметри:
+            - user_id: int - ідентифікатор користувача
+            - days: int - кількість днів назад
+
+            Повертає:
+            - list[dict]: список тренувальних записів
         """
         end_date = datetime.now()
         start_date = end_date - timedelta(days=days)
