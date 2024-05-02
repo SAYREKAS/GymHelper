@@ -16,7 +16,7 @@ class Connection:
             password (str): Пароль для користувача бази даних.
             database (str): Назва бази даних.
             session (PyMySQLConnection): Об'єкт з'єднання з базою даних.
-        """
+    """
 
     def __init__(self, host: str, user: str, password: str, database: str, port: int = 3306):
         self.__host = str(host)
@@ -449,4 +449,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    pass
