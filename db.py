@@ -1,8 +1,11 @@
 import pymysql
 import datetime
-from settings import *
 from datetime import datetime, timedelta
 from pymysql.connections import Connection as PyMySQLConnection
+
+from config import DATABASE_HOST, DATABASE_USER, DATABASE_PASS, DATABASE_NAME
+
+muscle_group_list = ['Шия', 'Плечі', 'Груди', 'Руки', 'Живіт', 'Спина', 'Сідниці', 'Ноги']
 
 
 class Connection:
@@ -442,11 +445,13 @@ class GymTraining:
         return training_records
 
 
-def main():
+con = Connection(host=DATABASE_HOST, user=DATABASE_USER, password=DATABASE_PASS, database=DATABASE_NAME)
+db = GymDb(con)
+user = GymUser(con)
+exercise = GymExercise(con)
+training = GymTraining(con)
+
+if __name__ == '__main__':
     db.drop_tables()
     db.configure_table()
     db.add_muscle_groups(muscle_group_list)
-
-
-if __name__ == '__main__':
-    pass
