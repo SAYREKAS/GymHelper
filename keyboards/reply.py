@@ -6,7 +6,7 @@ weight_step_1_30 = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16, 18, 20, 22, 24, 2
                     35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100]
 
 
-def create_reply_kbs(button_name_list: list[str], group: int = None):
+def create_reply_kbs(button_name_list: list[str], group: int = None, additional_btn: list[str] = None):
     keyboards = []
 
     if group:
@@ -16,6 +16,9 @@ def create_reply_kbs(button_name_list: list[str], group: int = None):
     else:
         for item in button_name_list:
             keyboards.append([KeyboardButton(text=str(item))])
+
+    if additional_btn:
+        keyboards.append([KeyboardButton(text=str(btn)) for btn in additional_btn])
 
     result = ReplyKeyboardMarkup(keyboard=keyboards, resize_keyboard=True)
     return result
@@ -35,7 +38,7 @@ class ReplyKb:
     settings_menu = ReplyKeyboardMarkup(keyboard=[
         [KeyboardButton(text='Вказати параметри тіла', )],
         [KeyboardButton(text='Видалити вправу')],
-        [KeyboardButton(text='Головне меню')],
+        [KeyboardButton(text='🏠Головне меню')],
     ], resize_keyboard=True)
 
     gender_btn = ReplyKeyboardMarkup(keyboard=[
@@ -45,5 +48,13 @@ class ReplyKb:
 
     another_training = ReplyKeyboardMarkup(keyboard=[
         [KeyboardButton(text='Додати ще один підхід', )],
-        [KeyboardButton(text='Головне меню', )],
+        [KeyboardButton(text='🏠Головне меню', )],
+    ], resize_keyboard=True)
+
+    cancel_btn = ReplyKeyboardMarkup(keyboard=[
+        [KeyboardButton(text='🚫Відмінити', )],
+    ], resize_keyboard=True)
+
+    home_btn = ReplyKeyboardMarkup(keyboard=[
+        [KeyboardButton(text='🏠Головне меню', )],
     ], resize_keyboard=True)
