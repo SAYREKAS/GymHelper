@@ -46,10 +46,7 @@ async def func(message: Message, state: FSMContext):
     data = await state.get_data()
     await state.clear()
     try:
-        user.add_user_details(user_id=message.chat.id,
-                              weight=data['weight'],
-                              age=data['age'],
-                              tall=data['tall'],
+        user.add_user_details(user_id=message.chat.id, weight=data['weight'], age=data['age'], tall=data['tall'],
                               gender=data['gender'])
     except pymysql.err.DataError:
         await message.answer('🔴Введено не коректні дані.', reply_markup=ReplyKb.main_menu)
