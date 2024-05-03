@@ -8,14 +8,17 @@ from aiogram import Bot, Dispatcher
 from aiogram.enums import ParseMode
 from aiogram.types import BotCommand
 from aiogram.filters import CommandStart
+from aiogram.fsm.context import FSMContext
 from aiogram.client.default import DefaultBotProperties
 
-from FSM.FSM_add_new_exercise import FSM_add_new_exercise
+from FSM.FSM_common import FSM_common
+from FSM.FSM_new_exercise import FSM_add_new_exercise
 from FSM.FSM_start_training import FSM_start_training
 from FSM.FSM_user_details import FSM_user_details
-from keyboards.reply import ReplyKb
+
 from db import user
 from config import TOKEN
+from keyboards.reply import ReplyKb
 
 BOT_COMMAND = [
     BotCommand(command='start', description='перезапустити бота'),
@@ -24,13 +27,16 @@ BOT_COMMAND = [
 bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 
 dp = Dispatcher()
-dp.include_router(FSM_user_details)
-dp.include_router(FSM_add_new_exercise)
-dp.include_router(FSM_start_training)
+dp.include_router(FSM_common)
+FSM_common.include_router(FSM_user_details)
+FSM_common.include_router(FSM_add_new_exercise)
+FSM_common.include_router(FSM_start_training)
 
 
 @dp.message(CommandStart())
-async def start(message: Message) -> None:
+async def start(message: Message, state: FSMContext) -> None:
+    await state.clear()
+
     if not user.user_exist(user_id=message.chat.id):
         user.add_user(user_id=message.chat.id, first_name=message.chat.first_name,
                       last_name=message.chat.last_name, username=message.chat.username)
@@ -42,11 +48,6 @@ async def start(message: Message) -> None:
 @dp.message(F.text == 'Налаштування')
 async def func(message: Message):
     await message.answer('Налаштування', reply_markup=ReplyKb.settings_menu)
-
-
-@dp.message(F.text == 'Головне меню')
-async def func(message: Message):
-    await message.answer('Головна', reply_markup=ReplyKb.main_menu)
 
 
 async def main() -> None:
