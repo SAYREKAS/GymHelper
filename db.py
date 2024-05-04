@@ -348,6 +348,22 @@ class GymExercise:
 
         return exercises
 
+    def delete_user_exercise(self, user_id: int, muscle_group_name: str, exercise_name: str) -> None:
+        """
+        Видаляє вправу та всі тренування, пов'язані з цією вправою, для вказаного користувача.
+
+        user_id: int - ідентифікатор користувача
+        muscle_group_name: str - назва групи м'язів, до якої відноситься вправа
+        exercise_name: str - назва вправи, яку потрібно видалити
+        """
+        with self.connection.cursor() as cursor:
+            cursor.execute("DELETE FROM training WHERE user_id = %s AND user_exercise_name = %s",
+                           (user_id, exercise_name))
+            cursor.execute("DELETE FROM user_exercise WHERE user_id = %s AND exercise_name = %s",
+                           (user_id, exercise_name))
+
+        self.connection.commit()
+
     def exercise_exists(self, exercise_name: str) -> bool:
         """
             Перевіряє наявність вправи з вказаним ім'ям в таблиці user_exercise.

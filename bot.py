@@ -12,6 +12,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.client.default import DefaultBotProperties
 
 from FSM.FSM_common import FSM_common
+from FSM.FSM_dell_exercise import FSM_dell_exercise
 from FSM.FSM_new_exercise import FSM_add_new_exercise
 from FSM.FSM_start_training import FSM_start_training
 from FSM.FSM_user_details import FSM_user_details
@@ -30,6 +31,7 @@ dp = Dispatcher()
 dp.include_router(FSM_common)
 FSM_common.include_router(FSM_user_details)
 FSM_common.include_router(FSM_add_new_exercise)
+FSM_common.include_router(FSM_dell_exercise)
 FSM_common.include_router(FSM_start_training)
 
 

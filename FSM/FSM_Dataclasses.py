@@ -13,7 +13,12 @@ class NewExerciseState(StatesGroup):
     exercise_name = State()
 
 
-class StartTraining(StatesGroup):
+class DellExerciseState(StatesGroup):
+    muscle_group_name = State()
+    exercise_name = State()
+
+
+class StartTrainingState(StatesGroup):
     muscle_group = State()
     exercise_name = State()
     repeats = State()

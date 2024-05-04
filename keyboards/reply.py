@@ -37,7 +37,7 @@ class ReplyKb:
 
     settings_menu = ReplyKeyboardMarkup(keyboard=[
         [KeyboardButton(text='Вказати параметри тіла', )],
-        [KeyboardButton(text='Видалити вправу')],
+        [KeyboardButton(text='🗑Видалити вправу')],
         [KeyboardButton(text='🏠Головне меню')],
     ], resize_keyboard=True)
 
