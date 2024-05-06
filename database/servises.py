@@ -14,7 +14,7 @@ class GymHelper:
         self.session.add(new_user)
         self.session.commit()
 
-    def add_user_details(self, user_id: int, weight: int, age: int, tall: int, gender: str) -> None:
+    def add_user_details(self, user_id: int, weight: int, age: int, tall: int, gender: str) -> str:
         user = self.session.query(User).filter_by(user_id=user_id).first()
 
         if user is not None:
@@ -23,8 +23,9 @@ class GymHelper:
             user.tall = tall
             user.gender = gender
             self.session.commit()
+            return "Дані успішно оновлено"
         else:
-            print(f"User with user_id {user_id} not found.")
+            return "Сталася помилка"
 
     def user_exist(self, user_id: int = None) -> bool:
         return True if user_id in [info.user_id for info in self.session.query(User).all()] else False
