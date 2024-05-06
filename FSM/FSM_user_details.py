@@ -6,7 +6,7 @@ from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import ReplyKeyboardRemove
 
-from db import user
+from database.core import gh
 from keyboards.reply import ReplyKb
 from FSM.FSM_Dataclasses import UserDetailsState
 
@@ -46,8 +46,8 @@ async def func(message: Message, state: FSMContext):
     data = await state.get_data()
     await state.clear()
     try:
-        user.add_user_details(user_id=message.chat.id, weight=data['weight'], age=data['age'], tall=data['tall'],
-                              gender=data['gender'])
+        gh.add_user_details(user_id=message.chat.id, weight=data['weight'], age=data['age'], tall=data['tall'],
+                            gender=data['gender'])
     except pymysql.err.DataError:
         await message.answer('🔴Введено не коректні дані.', reply_markup=ReplyKb.main_menu)
     else:

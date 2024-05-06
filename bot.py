@@ -17,7 +17,7 @@ from FSM.FSM_new_exercise import FSM_add_new_exercise
 from FSM.FSM_start_training import FSM_start_training
 from FSM.FSM_user_details import FSM_user_details
 
-from db import user
+from database.core import gh
 from config import TOKEN
 from keyboards.reply import ReplyKb
 
@@ -39,9 +39,9 @@ FSM_common.include_router(FSM_start_training)
 async def start(message: Message, state: FSMContext) -> None:
     await state.clear()
 
-    if not user.user_exist(user_id=message.chat.id):
-        user.add_user(user_id=message.chat.id, first_name=message.chat.first_name,
-                      last_name=message.chat.last_name, username=message.chat.username)
+    if not gh.user_exist(user_id=message.chat.id):
+        gh.add_new_user(user_id=message.chat.id, first_name=message.chat.first_name,
+                        last_name=message.chat.last_name, username=message.chat.username)
         await message.answer(f"Вітаємо в GymHelper", reply_markup=ReplyKb.start_menu)
     else:
         await message.answer(f"Бота перезапущено", reply_markup=ReplyKb.main_menu)
