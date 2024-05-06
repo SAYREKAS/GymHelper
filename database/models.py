@@ -43,7 +43,7 @@ class Training(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey('user.user_id'))
-    user_exercise_name: Mapped[int] = mapped_column(ForeignKey('exercise.exercise_name'))
+    user_exercise_name: Mapped[int] = mapped_column(ForeignKey('exercise.exercise_name', ondelete='CASCADE'))
     weight: Mapped[int] = mapped_column()
     repeats: Mapped[int] = mapped_column()
     date: Mapped[Date] = mapped_column(Date)
