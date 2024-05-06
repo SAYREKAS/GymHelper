@@ -4,6 +4,7 @@ from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 
 from database.core import gh
+from FSM.common_functions import is_number
 from FSM.FSM_Dataclasses import StartTrainingState
 from keyboards.reply import ReplyKb, create_reply_kbs
 
@@ -18,14 +19,6 @@ async def update_and_notify(message: Message, state: FSMContext, field: str, val
                              f"Вправа - {data.get('exercise_name') if data.get('exercise_name') else '❔'}\n"
                              f"Вага - {data.get('weight') if data.get('weight') else '❔'} кг\n"
                              f"Повтори - {data.get('repeats') if data.get('repeats') else '❔'} раз\n")
-
-
-def is_number(stroke: str) -> bool:
-    try:
-        float(stroke.replace(',', '.'))
-        return True
-    except ValueError:
-        return False
 
 
 # Реакція на натискання кнопкі ʼПочати тренуванняʼ______________________________________________________________________
