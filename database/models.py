@@ -14,9 +14,9 @@ class User(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(BigInteger, unique=True)
-    first_name: Mapped[str] = mapped_column(String(50))
-    last_name: Mapped[str] = mapped_column(String(50))
-    username: Mapped[str] = mapped_column(String(50))
+    first_name: Mapped[str] = mapped_column(String(50), nullable=True)
+    last_name: Mapped[str] = mapped_column(String(50), nullable=True)
+    username: Mapped[str] = mapped_column(String(50), nullable=True)
     weight: Mapped[int] = mapped_column(nullable=True)
     age: Mapped[int] = mapped_column(nullable=True)
     tall: Mapped[int] = mapped_column(nullable=True)
