@@ -1,10 +1,9 @@
-import pymysql
 from aiogram import Router, F
 from aiogram.types import Message
 from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 
-from db import exercise, training
+from database.core import gh
 from FSM.FSM_Dataclasses import StartTrainingState
 from keyboards.reply import ReplyKb, create_reply_kbs
 
@@ -21,51 +20,77 @@ async def update_and_notify(message: Message, state: FSMContext, field: str, val
                              f"Повтори - {data.get('repeats') if data.get('repeats') else '❔'} раз\n")
 
 
+def is_number(stroke: str) -> bool:
+    try:
+        float(stroke.replace(',', '.'))
+        return True
+    except ValueError:
+        return False
+
+
+# Реакція на натискання кнопкі ʼПочати тренуванняʼ______________________________________________________________________
 @FSM_start_training.message(StateFilter(None), (F.text == 'Почати тренування') | (F.text == 'Додати ще один підхід'))
 async def func(message: Message, state: FSMContext):
-    ex = exercise.get_user_exercises(user_id=message.chat.id)
+    ex = gh.get_user_exercises(user_id=message.chat.id)
+
     if ex:
         await state.set_state(StartTrainingState.muscle_group)
-        await message.answer('Що сьогодні тренуємо?', reply_markup=create_reply_kbs(ex,
-                                                                                    additional_btn=['🚫Відмінити']))
+        await message.answer('Що сьогодні тренуємо?', reply_markup=create_reply_kbs(ex, additional_btn=['🚫Відмінити']))
     else:
         await message.answer('🔴Ви ще не додали жодної вправи', reply_markup=ReplyKb.main_menu)
         await state.clear()
 
 
+# меню вибору групи мʼязів______________________________________________________________________________________________
 @FSM_start_training.message(StartTrainingState.muscle_group, F.text)
 async def func(message: Message, state: FSMContext):
-    await update_and_notify(message, state, 'muscle_group', message.text)
-    ex = exercise.get_user_exercises(user_id=message.chat.id)
-    await message.answer('Виберіть вправу', reply_markup=create_reply_kbs(ex[message.text],
-                                                                          additional_btn=['🚫Відмінити']))
-    await state.set_state(StartTrainingState.exercise_name)
+    ex = gh.get_user_exercises(user_id=message.chat.id)
+
+    if message.text in ex:
+        await update_and_notify(message, state, 'muscle_group', message.text)
+        await message.answer('Виберіть вправу',
+                             reply_markup=create_reply_kbs(ex[message.text], additional_btn=['🚫Відмінити']))
+        await state.set_state(StartTrainingState.exercise_name)
+    else:
+        await message.answer('неправильно вибрана вправа',
+                             reply_markup=create_reply_kbs(ex, additional_btn=['🚫Відмінити']))
 
 
+# меню вибору вправи з конкретної групи мʼязів__________________________________________________________________________
 @FSM_start_training.message(StartTrainingState.exercise_name, F.text)
 async def func(message: Message, state: FSMContext):
-    await update_and_notify(message, state, 'exercise_name', message.text)
-    await message.answer('Вкажіть вагу', reply_markup=ReplyKb.cancel_btn)
-    await state.set_state(StartTrainingState.weight)
+    ex = gh.get_user_exercises(user_id=message.chat.id)
+    data = await state.get_data()
+
+    if message.text in ex[data['muscle_group']]:
+        await update_and_notify(message, state, 'exercise_name', message.text)
+        await message.answer('Вкажіть вагу', reply_markup=ReplyKb.cancel_btn)
+        await state.set_state(StartTrainingState.weight)
+    else:
+        await message.answer('неправильно вибрана вправа',
+                             reply_markup=create_reply_kbs(ex[data['muscle_group']], additional_btn=['🚫Відмінити']))
 
 
+# меню вибору ваги з якою працювали_____________________________________________________________________________________
 @FSM_start_training.message(StartTrainingState.weight, F.text)
 async def func(message: Message, state: FSMContext):
-    await update_and_notify(message, state, 'weight', message.text)
-    await message.answer('Кількість повторів', reply_markup=ReplyKb.cancel_btn)
-    await state.set_state(StartTrainingState.repeats)
+    if is_number(message.text):
+        await update_and_notify(message, state, 'weight', message.text.replace(',', '.'))
+        await message.answer('Кількість повторів', reply_markup=ReplyKb.cancel_btn)
+        await state.set_state(StartTrainingState.repeats)
+    else:
+        await message.answer('Тільки цілі або дробові числа', reply_markup=ReplyKb.cancel_btn)
 
 
+# запис інформації в базу данних________________________________________________________________________________________
 @FSM_start_training.message(StartTrainingState.repeats, F.text)
 async def func(message: Message, state: FSMContext):
-    await update_and_notify(message, state, 'repeats', message.text)
-    data = await state.get_data()
-    await state.clear()
-    try:
-        training.add_training_record(user_id=message.chat.id, exercise_name=data['exercise_name'],
-                                     repeats=data['repeats'], weight=data['weight'])
-    except pymysql.err.DataError:
-        await message.answer('🔴введені дані не вірні\nвикористовуйте тільки цифри️️',
-                             reply_markup=ReplyKb.another_training)
+    if is_number(message.text):
+        await update_and_notify(message, state, 'repeats', message.text.replace(',', '.'))
+        data = await state.get_data()
+        await state.clear()
+        await message.answer(gh.add_training_record(user_id=message.chat.id, exercise_name=data['exercise_name'],
+                                                    repeats=data['repeats'], weight=data['weight']),
+                             reply_markup=ReplyKb.main_menu)
     else:
-        await message.answer('🟢Підхід записано', reply_markup=ReplyKb.another_training)
+        await message.answer('Тільки цілі або дробові числа', reply_markup=ReplyKb.cancel_btn)
