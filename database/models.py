@@ -14,13 +14,13 @@ class User(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(BigInteger, unique=True)
-    first_name: Mapped[str] = mapped_column(String(50), nullable=True)
-    last_name: Mapped[str] = mapped_column(String(50), nullable=True)
-    username: Mapped[str] = mapped_column(String(50), nullable=True)
+    first_name: Mapped[str] = mapped_column(String(255), nullable=True)
+    last_name: Mapped[str] = mapped_column(String(255), nullable=True)
+    username: Mapped[str] = mapped_column(String(255), nullable=True)
     weight: Mapped[int] = mapped_column(nullable=True)
     age: Mapped[int] = mapped_column(nullable=True)
     tall: Mapped[int] = mapped_column(nullable=True)
-    gender: Mapped[str] = mapped_column(String(50), nullable=True)
+    gender: Mapped[str] = mapped_column(String(255), nullable=True)
 
 
 class MuscleGroups(Base):
@@ -34,7 +34,7 @@ class Exercise(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey('user.user_id'))
-    muscle_group_name: Mapped[str] = mapped_column(String(50), ForeignKey('muscle_groups.group_name'))
+    muscle_group_name: Mapped[str] = mapped_column(String(255), ForeignKey('muscle_groups.group_name'))
     exercise_name: Mapped[str] = mapped_column(String(255))
 
 
