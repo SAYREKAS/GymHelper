@@ -9,17 +9,17 @@ class UserDetailsState(StatesGroup):
 
 
 class NewExerciseState(StatesGroup):
-    muscle_group_name = State()
-    exercise_name = State()
+    muscle_group = State()
+    exercise = State()
 
 
 class DellExerciseState(StatesGroup):
-    muscle_group_name = State()
-    exercise_name = State()
+    muscle_group = State()
+    exercise = State()
 
 
 class StartTrainingState(StatesGroup):
     muscle_group = State()
-    exercise_name = State()
+    exercise = State()
     repeats = State()
     weight = State()
